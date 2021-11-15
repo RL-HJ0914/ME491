@@ -11,7 +11,9 @@ environment:
   max_time: 8
   reward:
     goal:
-      coeff: -0.3
+      coeff: 0
+    ori:
+      coeff: 1
 
 architecture:
   policy_net: [128, 128]

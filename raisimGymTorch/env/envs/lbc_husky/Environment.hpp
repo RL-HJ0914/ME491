@@ -138,23 +138,37 @@ class ENVIRONMENT : public RaisimGymEnv {
 
     updateObservation();
     rewards_.record("goal", gc_.head<2>().norm());
+    rewards_.record("ori",reward_ori);
+
+
     return rewards_.sum();
   }
 
   void updateObservation() {
     husky_->getState(gc_, gv_);
-
     raisim::Vec<3> lidarPos; raisim::Mat<3,3> lidarOri;
     husky_->getFramePosition("imu_joint", lidarPos);
     husky_->getFrameOrientation("imu_joint", lidarOri);
+    raisim::Vec<4> quat;
+    raisim::Mat<3,3> rot;
+    quat[0] = gc_[3]; quat[1] = gc_[4]; quat[2] = gc_[5]; quat[3] = gc_[6];
+    raisim::quatToRotMat(quat, rot);
+    goal_ori << -gc_(0),-gc_(1);
+    goal_ori /= goal_ori.norm();
+    robot_ori << rot(0,0),rot(1,0);
+    robot_ori /=robot_ori.norm();
+
+    reward_ori=goal_ori.dot(robot_ori);
+    
 
     Eigen::VectorXd lidarData(SCANSIZE);
     Eigen::Vector3d direction;
-    const double scanWidth = 2. * M_PI;
+//    const double scanWidth = 2. * M_PI;
+    const double scanWidth = 0.2 * M_PI;
 
     for (int j = 0; j < SCANSIZE; j++) {
       const double yaw = j * M_PI / SCANSIZE * scanWidth - scanWidth * 0.5 * M_PI;
-      direction = {cos(yaw), sin(yaw), -0.1 * M_PI};
+      direction = {-cos(yaw), -sin(yaw), -0.1 * M_PI};
       direction *= 1. / direction.norm();
       const Eigen::Vector3d rayDirection = lidarOri.e() * direction;
       auto &col = world_->rayTest(lidarPos.e(), rayDirection, 20);
@@ -198,6 +212,8 @@ class ENVIRONMENT : public RaisimGymEnv {
   raisim::HeightMap* heightMap_;
   Eigen::VectorXd gc_init_, gv_init_, gc_, gv_, genForce_, torque4_;
   Eigen::VectorXd actionMean_, actionStd_, obDouble_;
+  Eigen::Vector2d goal_ori, robot_ori;
+  double reward_ori;
   std::vector<Eigen::Vector2d> poles_;
   int SCANSIZE = 20;
   int GRIDSIZE = 6;
