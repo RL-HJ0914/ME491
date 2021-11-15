@@ -7,7 +7,8 @@ from setuptools import Extension, find_packages
 from setuptools.command.build_ext import build_ext
 from distutils.core import setup
 
-__CMAKE_PREFIX_PATH__ = None
+# __CMAKE_PREFIX_PATH__ = None
+__CMAKE_PREFIX_PATH__ = "/home/hyungjun/raisim_workspace/raisimLib/raisim/linux"
 __DEBUG__ = False
 
 if "--CMAKE_PREFIX_PATH" in sys.argv:

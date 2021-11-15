@@ -17,7 +17,7 @@ args = parser.parse_args()
 # directories
 task_path = os.path.dirname(os.path.realpath(__file__))
 home_path = task_path + "/../../../.."
-weight_path = home_path + "/raisimGymTorch/data/husky_navigation/2021-11-15-11-10-34/full_4200.pt"
+# weight_path = home_path + "/raisimGymTorch/data/husky_navigation/2021-11-15-11-10-34/full_4200.pt"
 
 # config
 cfg = YAML().load(open(task_path + "/cfg.yaml", 'r'))
@@ -30,6 +30,7 @@ env = VecEnv(lbc_husky.RaisimGymEnv(home_path + "/rsc", dump(cfg['environment'],
 ob_dim = env.num_obs
 act_dim = env.num_acts
 
+weight_path = args.weight
 iteration_number = weight_path.rsplit('/', 1)[1].split('_', 1)[1].rsplit('.', 1)[0]
 weight_dir = weight_path.rsplit('/', 1)[0] + '/'
 
