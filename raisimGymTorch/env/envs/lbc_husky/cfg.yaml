@@ -17,9 +17,9 @@ environment:
     near:
       coeff: 0
     vel:
-      coeff: 0.01
-    good_ori:
-      coeff: 0
+      coeff: 0.04
+    reward_avoid:
+      coeff: 10
 
 architecture:
   policy_net: [128,64]

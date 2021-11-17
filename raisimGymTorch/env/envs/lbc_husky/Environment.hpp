@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <set>
 #include "../../RaisimGymEnv.hpp"
+#include <time.h>
 
 /// gc_ = x,y,z positions
 ///       w,x,y,z quaternion
@@ -86,7 +87,7 @@ class ENVIRONMENT : public RaisimGymEnv {
 
     /// action scaling
     actionMean_ = gc_init_.tail(nJoints_);
-    actionStd_.setConstant(10.);
+    actionStd_.setConstant(50.);
 
     /// Reward coefficients
     rewards_.initializeFromConfigurationFile (cfg["reward"]);
@@ -146,7 +147,7 @@ class ENVIRONMENT : public RaisimGymEnv {
     rewards_.record("ori",reward_ori);
     rewards_.record("near",reward_near);
     rewards_.record("vel",reward_vel);
-    rewards_.record("good_ori",reward_good_ori);
+    rewards_.record("reward_avoid",reward_avoid);
     return rewards_.sum();
 
   }
@@ -169,7 +170,7 @@ class ENVIRONMENT : public RaisimGymEnv {
     robot_ori /= (robot_ori.norm()+1e-8);
 
     reward_ori=-acos(goal_ori.dot(robot_ori))/M_PI;
-    reward_good_ori = leakyrelu(acos(rot(2,2))*180/M_PI);
+
     vel_robotframe= rot.e().transpose()*gv_.head(3);
     reward_vel=vel_robotframe(0);
 
@@ -190,7 +191,7 @@ class ENVIRONMENT : public RaisimGymEnv {
       Eigen::Vector3d rayDirection = lidarOri.e() * direction; // original one
       rayDirection(2)=0;
 
-      auto &col = world_->rayTest(lidarPos.e(), rayDirection, 20);
+      auto &col = world_->rayTest(lidarPos.e(), rayDirection, SCANSIZE);
       if (col.size() > 0) {
         lidarData[j] = (col[0].getPosition() - lidarPos.e()).norm();
         if (visualizable_)
@@ -201,8 +202,10 @@ class ENVIRONMENT : public RaisimGymEnv {
           scans[j]->setPosition({0,0,100});
       }
     }
+    min_distance=lidarData.minCoeff();
 
-//    std::cout<<"lidardata:"<<lidarData<<std::endl;
+    reward_avoid=fmin(2*(min_distance-0.6),0);
+//    std::cout<<"lidardata:"<<lidarData.transpose()<<std::endl;
     obDouble_ << gc_.head(7), gv_, lidarData;
 
     //make cylinder indicating direction to origin
@@ -250,6 +253,8 @@ class ENVIRONMENT : public RaisimGymEnv {
   bool isTerminalState(float& terminalReward) final {
     terminalReward = -20;
     return false;
+
+
   }
 
   float notCompleted() {
@@ -280,7 +285,8 @@ class ENVIRONMENT : public RaisimGymEnv {
   Eigen::VectorXd actionMean_, actionStd_, obDouble_;
   Eigen::Vector2d goal_ori, robot_ori;
   Eigen::Vector3d vel_robotframe;
-  double reward_ori, reward_near,reward_vel, reward_good_ori;
+  double min_distance;
+  double reward_ori, reward_near,reward_vel, reward_avoid;
   double angle_threshold=50 ; //degree
   double curriculumFactor_ =1;
   std::vector<Eigen::Vector2d> poles_;

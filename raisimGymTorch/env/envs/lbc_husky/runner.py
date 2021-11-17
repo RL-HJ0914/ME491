@@ -148,6 +148,7 @@ for update in range(1000000):
     print('----------------------------------------------------')
     print('{:>6}th iteration'.format(update))
     print('{:<40} {:>6}'.format("avg reward: ", '{:0.10f}'.format(average_performance)))
+    print('{:<40} {:>6}'.format("dones: ", '{:0.6f}'.format(average_dones)))
     print('{:<40} {:>6}'.format("avg completion time: ", '{:0.6f}'.format(completed_sum / env.num_envs * cfg['environment']['control_dt'])))
     print('{:<40} {:>6}'.format("time elapsed in this iteration: ", '{:6.4f}'.format(end - start)))
     print('{:<40} {:>6}'.format("fps: ", '{:6.0f}'.format(total_iteration_steps / (end - start))))
