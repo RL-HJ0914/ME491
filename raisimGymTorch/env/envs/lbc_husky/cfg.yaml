@@ -4,17 +4,23 @@ record_video: yes
 environment:
   render: yes
   num_envs: 200
-  eval_every_n: 200
-  num_threads: 30
+  eval_every_n: 250
+  num_threads: 60
   simulation_dt: 0.0025
   control_dt: 0.1
   max_time: 8
   reward:
     goal:
-      coeff: 0
+      coeff: 0 #-0.5
     ori:
-      coeff: 1
+      coeff: 0.1
+    near:
+      coeff: 0
+    vel:
+      coeff: 0.01
+    good_ori:
+      coeff: 0
 
 architecture:
-  policy_net: [128, 128]
-  value_net: [128, 128]
+  policy_net: [128,64]
+  value_net: [128,64]

@@ -16,11 +16,11 @@ class PPO:
                  num_learning_epochs,
                  num_mini_batches,
                  clip_param=0.2,
-                 gamma=0.998,
+                 gamma=0.998,#default 0.998
                  lam=0.95,
                  value_loss_coef=0.5,
                  entropy_coef=0.0,
-                 learning_rate=5e-4,
+                 learning_rate=5e-4, #default 5e-4
                  max_grad_norm=0.5,
                  use_clipped_value_loss=True,
                  log_dir='run',
