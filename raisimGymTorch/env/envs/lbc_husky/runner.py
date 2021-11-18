@@ -72,7 +72,7 @@ ppo = PPO.PPO(actor=actor,
               shuffle_batch=False,
               )
 
-scheduler = torch.optim.lr_scheduler.MultiStepLR(ppo.optimizer, milestones=[400,800], gamma=0.6)
+scheduler = torch.optim.lr_scheduler.MultiStepLR(ppo.optimizer, milestones=[300,600,800], gamma=0.6)
 
 if mode == 'retrain':
     load_param(weight_path, env, actor, critic, ppo.optimizer, saver.data_dir)

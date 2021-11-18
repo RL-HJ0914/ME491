@@ -7,19 +7,19 @@ environment:
   eval_every_n: 250
   num_threads: 60
   simulation_dt: 0.0025
-  control_dt: 0.1
+  control_dt: 0.2
   max_time: 8
   reward:
     goal:
-      coeff: 0 #-0.5
+      coeff: -0.3 #-0.5
     ori:
-      coeff: 0.1
+      coeff: 4
     near:
-      coeff: 0
+      coeff: 100
     vel:
-      coeff: 0.04
+      coeff: 0.01
     reward_avoid:
-      coeff: 10
+      coeff: 0
 
 architecture:
   policy_net: [128,64]

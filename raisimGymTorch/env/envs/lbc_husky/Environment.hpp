@@ -161,7 +161,7 @@ class ENVIRONMENT : public RaisimGymEnv {
     husky_->getFrameOrientation("imu_joint", lidarOri);
 
     raisim::Vec<4> quat;
-    raisim::Mat<3,3> rot;
+
     quat[0] = gc_[3]; quat[1] = gc_[4]; quat[2] = gc_[5]; quat[3] = gc_[6];
     raisim::quatToRotMat(quat, rot);
     goal_ori << -gc_(0),-gc_(1);
@@ -169,7 +169,7 @@ class ENVIRONMENT : public RaisimGymEnv {
     robot_ori << rot(0,0),rot(1,0);
     robot_ori /= (robot_ori.norm()+1e-8);
 
-    reward_ori=-acos(goal_ori.dot(robot_ori))/M_PI;
+    reward_ori= 1-acos(goal_ori.dot(robot_ori))/M_PI;
 
     vel_robotframe= rot.e().transpose()*gv_.head(3);
     reward_vel=vel_robotframe(0);
@@ -180,7 +180,7 @@ class ENVIRONMENT : public RaisimGymEnv {
     Eigen::VectorXd lidarData(SCANSIZE);
     Eigen::Vector3d direction;
 //    const double scanWidth = 2. * M_PI; // original
-    const double scanWidth = 10 * M_PI/180;
+    const double scanWidth = 20 * M_PI/180;
 
     for (int j = 0; j < SCANSIZE; j++) {
 //      const double yaw = j * M_PI / SCANSIZE * scanWidth - scanWidth * 0.5 * M_PI; // original
@@ -189,7 +189,7 @@ class ENVIRONMENT : public RaisimGymEnv {
       direction = {cos(yaw), sin(yaw), 0};
       direction *= 1. / direction.norm();
       Eigen::Vector3d rayDirection = lidarOri.e() * direction; // original one
-      rayDirection(2)=0;
+      rayDirection(2)=-0.1*M_PI;
 
       auto &col = world_->rayTest(lidarPos.e(), rayDirection, SCANSIZE);
       if (col.size() > 0) {
@@ -251,7 +251,10 @@ class ENVIRONMENT : public RaisimGymEnv {
     return C;
   }
   bool isTerminalState(float& terminalReward) final {
-    terminalReward = -20;
+    if (rot(2,2)<0) {
+      terminalReward = -100;
+      return true;
+    }
     return false;
 
 
@@ -280,7 +283,7 @@ class ENVIRONMENT : public RaisimGymEnv {
   bool visualizable_ = false;
   raisim::ArticulatedSystem* husky_;
   raisim::HeightMap* heightMap_;
-
+  raisim::Mat<3,3> rot;
   Eigen::VectorXd gc_init_, gv_init_, gc_, gv_, genForce_, torque4_;
   Eigen::VectorXd actionMean_, actionStd_, obDouble_;
   Eigen::Vector2d goal_ori, robot_ori;
@@ -290,7 +293,7 @@ class ENVIRONMENT : public RaisimGymEnv {
   double angle_threshold=50 ; //degree
   double curriculumFactor_ =1;
   std::vector<Eigen::Vector2d> poles_;
-  int SCANSIZE = 3; // original = 20
+  int SCANSIZE = 9; // original = 20
   int GRIDSIZE = 6;
   std::vector<raisim::Visuals *> scans,origin;  // for visualization
 
