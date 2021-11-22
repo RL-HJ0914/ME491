@@ -128,6 +128,7 @@ for update in range(1000000):
             ppo.writer.add_scalar(data_tags[data_id]+'/min', data_min[data_id], global_step=update)
             ppo.writer.add_scalar(data_tags[data_id]+'/max', data_max[data_id], global_step=update)
 
+
         env.stop_video_recording()
         env.turn_off_visualization()
 
@@ -162,6 +163,8 @@ for update in range(1000000):
     end = time.time()
 
     scheduler.step()
+    if update % 20 == 0:
+        ppo.writer.add_scalar('avg completion time', completed_sum / env.num_envs * cfg['environment']['control_dt'], global_step=update)
 
     print('----------------------------------------------------')
     print('{:>6}th iteration'.format(update))
