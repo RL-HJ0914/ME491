@@ -202,11 +202,10 @@ class ENVIRONMENT : public RaisimGymEnv {
     for (int j = 0; j < SCANSIZE; j++) {
 //      const double yaw = j * M_PI / SCANSIZE * scanWidth - scanWidth * 0.5 * M_PI; // original
       const double yaw = -(SCANSIZE-1)/2*scanWidth + scanWidth*j;
-//      direction = {-cos(yaw), -sin(yaw), -0.1 * M_PI}; // original one
-      direction = {cos(yaw), sin(yaw), 0};
+      direction = {cos(yaw), sin(yaw), -0.1 * M_PI}; // original one
+//      direction = {cos(yaw), sin(yaw), 0};
       direction *= 1. / direction.norm();
       Eigen::Vector3d rayDirection = lidarOri.e() * direction; // original one
-      rayDirection(2)=-0.1*M_PI;
 
       auto &col = world_->rayTest(lidarPos.e(), rayDirection, SCANSIZE);
       if (col.size() > 0) {
