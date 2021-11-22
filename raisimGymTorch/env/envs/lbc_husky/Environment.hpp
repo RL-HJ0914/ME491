@@ -72,6 +72,7 @@ class ENVIRONMENT : public RaisimGymEnv {
     /// initialize containers
     gc_.setZero(gcDim_);
     gc_init_.setZero(gcDim_);
+    lidarData.setZero(SCANSIZE);
     gv_.setZero(gvDim_);
     gv_init_.setZero(gvDim_);
     genForce_.setZero(gvDim_);
@@ -103,7 +104,11 @@ class ENVIRONMENT : public RaisimGymEnv {
         scans.push_back(server_->addVisualBox("box" + std::to_string(i), 0.1, 0.1, 0.1, 1, 0, 0));
       origin.push_back(server_->addVisualCylinder("origin_cylinder",0.05,0.6,0,1,1,0.7));
     }
+    for(auto& rw: rewards_.getStdMap()) {
+      stepDataTag_.push_back(rw.first);
+    }
 
+    stepData_.resize(stepDataTag_.size());
   }
 
   void init() final { }
@@ -123,6 +128,19 @@ class ENVIRONMENT : public RaisimGymEnv {
       husky_->setState(gc_init_, gv_init_);
     }
     updateObservation();
+  }
+
+  const std::vector<std::string>& getStepDataTag() {
+    return stepDataTag_;
+  }
+
+  const Eigen::VectorXf& getStepData() {
+    int i = 0;
+    for(auto& rw: rewards_.getStdMap()){
+      stepData_[i] = rw.second;
+      i++;
+    }
+    return stepData_;
   }
 
   float step(const Eigen::Ref<EigenVec>& action) final {
@@ -177,7 +195,6 @@ class ENVIRONMENT : public RaisimGymEnv {
     if (near_zero()) reward_near=1;
     else reward_near=0;
 
-    Eigen::VectorXd lidarData(SCANSIZE);
     Eigen::Vector3d direction;
 //    const double scanWidth = 2. * M_PI; // original
     const double scanWidth = 20 * M_PI/180;
@@ -284,7 +301,7 @@ class ENVIRONMENT : public RaisimGymEnv {
   raisim::ArticulatedSystem* husky_;
   raisim::HeightMap* heightMap_;
   raisim::Mat<3,3> rot;
-  Eigen::VectorXd gc_init_, gv_init_, gc_, gv_, genForce_, torque4_;
+  Eigen::VectorXd gc_init_, gv_init_, gc_, gv_, genForce_, torque4_, lidarData;
   Eigen::VectorXd actionMean_, actionStd_, obDouble_;
   Eigen::Vector2d goal_ori, robot_ori;
   Eigen::Vector3d vel_robotframe;
@@ -296,6 +313,9 @@ class ENVIRONMENT : public RaisimGymEnv {
   int SCANSIZE = 9; // original = 20
   int GRIDSIZE = 6;
   std::vector<raisim::Visuals *> scans,origin;  // for visualization
+
+  Eigen::VectorXf stepData_;
+  std::vector<std::string> stepDataTag_;
 
   thread_local static std::mt19937 gen_;
   thread_local static std::normal_distribution<double> normDist_;
