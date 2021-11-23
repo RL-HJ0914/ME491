@@ -31,7 +31,8 @@ class ENVIRONMENT : public RaisimGymEnv {
     /// add robot
     husky_ = world_->addArticulatedSystem(resourceDir_ + "/husky/husky.urdf");
     husky_->setName("husky");
-    husky_->setControlMode(raisim::ControlMode::FORCE_AND_TORQUE);
+//    husky_->setControlMode(raisim::ControlMode::FORCE_AND_TORQUE);
+    husky_->setControlMode(raisim::ControlMode::PD_PLUS_FEEDFORWARD_TORQUE);
 
     /// add heightmap
     raisim::TerrainProperties terrainProperties;
@@ -77,8 +78,15 @@ class ENVIRONMENT : public RaisimGymEnv {
     gv_init_.setZero(gvDim_);
     genForce_.setZero(gvDim_);
     torque4_.setZero(nJoints_);
+    vw_target.setZero(2);
+    ptarget.setZero(gcDim_);
+    dtarget.setZero(gvDim_);
+    pgains.setZero(husky_->getDOF());
+    dgains.setZero(husky_->getDOF());
+    dgains.tail(4) << 50,50,50,50 ;
 
     /// this is nominal configuration of anymal
+    gc_init_ << 0, 0, 0.50, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0;
     gc_init_ << 0, 0, 0.50, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0;
 
     /// MUST BE DONE FOR ALL ENVIRONMENTS
@@ -88,7 +96,7 @@ class ENVIRONMENT : public RaisimGymEnv {
 
     /// action scaling
     actionMean_ = gc_init_.tail(nJoints_);
-    actionStd_.setConstant(50.);
+    actionStd_.setConstant(5.);
 
     /// Reward coefficients
     rewards_.initializeFromConfigurationFile (cfg["reward"]);
@@ -145,13 +153,18 @@ class ENVIRONMENT : public RaisimGymEnv {
 
   float step(const Eigen::Ref<EigenVec>& action) final {
     /// action scaling
-    torque4_ = action.cast<double>();
-    torque4_ = torque4_.cwiseProduct(actionStd_);
-    torque4_ += actionMean_;
-    genForce_.tail(nJoints_) = torque4_;
+    vw_target = action.cast<double>();
+    vw_target = vw_target.cwiseProduct(actionStd_);
+    vw_target += actionMean_;
+    w1= (vw_target(0)-L1*vw_target(1))/wheel_radius;
+    w2= (vw_target(0)+L1*vw_target(1))/wheel_radius;
+    dtarget.tail(nJoints_) << w1,w2,w1,w2;
 
 
-    husky_->setGeneralizedForce(genForce_);
+//    husky_->setGeneralizedForce(genForce_);
+    husky_->setPdGains(pgains,dgains);
+    husky_->setPTarget(ptarget);
+    husky_->setDTarget(dtarget);
 
     for (int i = 0; i < int(control_dt_ / simulation_dt_ + 1e-10); i++) {
       if (server_) server_->lockVisualizationServerMutex();
@@ -161,7 +174,7 @@ class ENVIRONMENT : public RaisimGymEnv {
 
     updateObservation();
 
-    rewards_.record("goal", std::max(gc_.head<2>().norm(),3.));
+    rewards_.record("goal", gc_.head<2>().norm());
     rewards_.record("ori",reward_ori);
     rewards_.record("near",reward_near);
     rewards_.record("vel",reward_vel);
@@ -220,7 +233,7 @@ class ENVIRONMENT : public RaisimGymEnv {
     }
     min_distance=lidarData.minCoeff();
 
-    reward_avoid=fmin(2*(min_distance-0.6),0);
+    reward_avoid=fmin(-1/(90-15)*(180/M_PI*acos(rot(2,2))-15),0);
 //    std::cout<<"lidardata:"<<lidarData.transpose()<<std::endl;
     obDouble_ << gc_.head(7), gv_, lidarData;
 
@@ -284,7 +297,7 @@ class ENVIRONMENT : public RaisimGymEnv {
   }
 
   bool near_zero() {
-    if (gc_.head(2).norm() < 2)
+    if (gc_.head(2).norm() < 1.9)
       return true;
     else
       return false;
@@ -300,14 +313,20 @@ class ENVIRONMENT : public RaisimGymEnv {
   raisim::ArticulatedSystem* husky_;
   raisim::HeightMap* heightMap_;
   raisim::Mat<3,3> rot;
+  Eigen::Vector2d vw_target;
   Eigen::VectorXd gc_init_, gv_init_, gc_, gv_, genForce_, torque4_, lidarData;
   Eigen::VectorXd actionMean_, actionStd_, obDouble_;
   Eigen::Vector2d goal_ori, robot_ori;
   Eigen::Vector3d vel_robotframe;
+  Eigen::VectorXd pgains, dgains, ptarget, dtarget;
+
   double min_distance;
   double reward_ori, reward_near,reward_vel, reward_avoid;
   double angle_threshold=50 ; //degree
   double curriculumFactor_ =1;
+  double wheel_radius=0.17775;
+  double L1= 0.285;
+  double w1,w2;
   std::vector<Eigen::Vector2d> poles_;
   int SCANSIZE = 9; // original = 20
   int GRIDSIZE = 6;
