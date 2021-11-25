@@ -63,7 +63,7 @@ ppo = PPO.PPO(actor=actor,
               critic=critic,
               num_envs=cfg['environment']['num_envs'],
               num_transitions_per_env=n_steps,
-              num_learning_epochs=4,
+              num_learning_epochs=4,# default 4
               gamma=0.996,
               lam=0.95,
               num_mini_batches=4,
@@ -98,6 +98,13 @@ for update in range(1000000):
         env.turn_on_visualization()
         env.start_video_recording(datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S") + "policy_"+str(update)+'.mp4')
 
+        data_tags = env.get_step_data_tag()
+        data_size = 0
+        data_mean = np.zeros(shape=(len(data_tags), 1), dtype=np.float32)
+        data_square_sum = np.zeros(shape=(len(data_tags), 1), dtype=np.float32)
+        data_min = np.inf * np.ones(shape=(len(data_tags), 1), dtype=np.float32)
+        data_max = -np.inf * np.ones(shape=(len(data_tags), 1), dtype=np.float32)
+
         for step in range(n_steps):
             frame_start = time.time()
             obs = env.observe(False)
@@ -107,6 +114,17 @@ for update in range(1000000):
             wait_time = cfg['environment']['control_dt'] - (frame_end-frame_start)
             if wait_time > 0.:
                 time.sleep(wait_time)
+            data_size = env.get_step_data(data_size, data_mean, data_square_sum, data_min, data_max)
+
+        data_size = env.get_step_data(data_size, data_mean, data_square_sum, data_min, data_max)
+
+        data_std = np.sqrt((data_square_sum - data_size * data_mean * data_mean) / (data_size - 1 + 1e-16))
+
+        for data_id in range(len(data_tags)):
+            ppo.writer.add_scalar(data_tags[data_id]+'/mean', data_mean[data_id], global_step=update)
+            ppo.writer.add_scalar(data_tags[data_id]+'/std', data_std[data_id], global_step=update)
+            ppo.writer.add_scalar(data_tags[data_id]+'/min', data_min[data_id], global_step=update)
+            ppo.writer.add_scalar(data_tags[data_id]+'/max', data_max[data_id], global_step=update)
 
         env.stop_video_recording()
         env.turn_off_visualization()
@@ -141,9 +159,13 @@ for update in range(1000000):
 
     end = time.time()
 
+    if update % 10 == 0:
+        ppo.writer.add_scalar('avg completion time', completed_sum / env.num_envs * cfg['environment']['control_dt'], global_step=update)
+
     print('----------------------------------------------------')
     print('{:>6}th iteration'.format(update))
     print('{:<40} {:>6}'.format("avg reward: ", '{:0.10f}'.format(average_performance)))
+    print('{:<40} {:>6}'.format("dones: ", '{:0.6f}'.format(average_dones)))
     print('{:<40} {:>6}'.format("avg completion time: ", '{:0.6f}'.format(completed_sum / env.num_envs * cfg['environment']['control_dt'])))
     print('{:<40} {:>6}'.format("time elapsed in this iteration: ", '{:6.4f}'.format(end - start)))
     print('{:<40} {:>6}'.format("fps: ", '{:6.0f}'.format(total_iteration_steps / (end - start))))

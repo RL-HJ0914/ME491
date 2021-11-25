@@ -50,7 +50,7 @@ class ENVIRONMENT : public RaisimGymEnv {
     /// add obstacles
     for (int i = 0; i < 70; i += GRIDSIZE) {
       for (int j = (i % (GRIDSIZE * GRIDSIZE)) * 2 / GRIDSIZE; j < 70; j += GRIDSIZE) {
-        poles_.emplace_back(Eigen::Vector2d{i - 35.0, j - 35.0});
+        poles_.emplace_back(Eigen::Vector2d{1.01449*j - 35.0, 1.01449*i - 35.0});
         heightVec[i*70 + j] += 1.;
       }
     }
@@ -99,10 +99,34 @@ class ENVIRONMENT : public RaisimGymEnv {
       /// lidar points visualization
       for(int i = 0; i < SCANSIZE; i++)
         scans.push_back(server_->addVisualBox("box" + std::to_string(i), 0.1, 0.1, 0.1, 1, 0, 0));
+      origin.push_back(server_->addVisualCylinder("origin_cylinder",0.08,0.6,0,1,0,1));
+      origin.push_back(server_->addVisualCylinder("horn1",0.2,80,0,0,1,0.05));
+      origin.push_back(server_->addVisualBox("origin",0.2,0.2,0.2,1,1,0.5,1));
     }
+    for(auto& rw: rewards_.getStdMap()) {
+      stepDataTag_.push_back(rw.first);
+    }
+
+    stepData_.resize(stepDataTag_.size());
+
   }
 
-  void init() final { }
+  void init() final {
+    updateObservation();
+  }
+
+  const std::vector<std::string>& getStepDataTag() {
+    return stepDataTag_;
+  }
+
+  const Eigen::VectorXf& getStepData() {
+    int i = 0;
+    for(auto& rw: rewards_.getStdMap()){
+      stepData_[i] = rw.second;
+      i++;
+    }
+    return stepData_;
+  }
 
   void reset() final {
     {
@@ -137,24 +161,42 @@ class ENVIRONMENT : public RaisimGymEnv {
     }
 
     updateObservation();
-    rewards_.record("goal", gc_.head<2>().norm());
+    rewards_.record("goal", -gc_.head<2>().norm()-0*collide_with_horn());
+    rewards_.record("ori", reward_ori);
+    rewards_.record("vel",reward_vel);
+    rewards_.record("near",reward_near);
+
     return rewards_.sum();
   }
 
   void updateObservation() {
     husky_->getState(gc_, gv_);
+    get_nearest_horn(gc_.head(2));
+    quat[0] = gc_[3]; quat[1] = gc_[4]; quat[2] = gc_[5]; quat[3] = gc_[6];
+    raisim::quatToRotMat(quat, rot);
+    goal_ori<< -gc_(0), -gc_(1), 0;
+    robot_ori << -rot(0,0), -rot(1,0), 0; // -x direction of robot
+    robot_vel_ori << gv_(0), gv_(1),0;
+    goal_ori/=goal_ori.norm();
+    robot_ori/=robot_ori.norm();
+    robot_vel_ori/=robot_vel_ori.norm();
 
     raisim::Vec<3> lidarPos; raisim::Mat<3,3> lidarOri;
     husky_->getFramePosition("imu_joint", lidarPos);
     husky_->getFrameOrientation("imu_joint", lidarOri);
 
+    reward_ori=goal_ori.dot(robot_ori);
+//    reward_vel= -(rot.e().transpose()*gv_.head(3))(0);// -x direction velocity
+    reward_vel= goal_ori.dot(gv_.head(3))/5;
+    reward_near=(1-notCompleted());
+
     Eigen::VectorXd lidarData(SCANSIZE);
     Eigen::Vector3d direction;
-    const double scanWidth = 2. * M_PI;
+    const double scanWidth = 10 * M_PI/180;
 
     for (int j = 0; j < SCANSIZE; j++) {
-      const double yaw = j * M_PI / SCANSIZE * scanWidth - scanWidth * 0.5 * M_PI;
-      direction = {cos(yaw), sin(yaw), -0.1 * M_PI};
+      const double yaw = -(SCANSIZE-1)/2*scanWidth + scanWidth*j;
+      direction = {cos(yaw), sin(yaw), -0.05 * M_PI};
       direction *= 1. / direction.norm();
       const Eigen::Vector3d rayDirection = lidarOri.e() * direction;
       auto &col = world_->rayTest(lidarPos.e(), rayDirection, 20);
@@ -168,19 +210,76 @@ class ENVIRONMENT : public RaisimGymEnv {
           scans[j]->setPosition({0,0,100});
       }
     }
+    visualize_cylinder();
+
     obDouble_ << gc_.head(7), gv_, lidarData;
   }
 
   void observe(Eigen::Ref<EigenVec> ob) final {
     ob = obDouble_.cast<float>();
   }
+  void visualize_cylinder(){
+    z_ = goal_ori;
+    x_<< 0,0,1;
+    z_/=(z_.norm()+1e-10);
+    x_/=(x_.norm()+1e-10);
+    y_= crossProduct(z_,x_);
+    cylinder_rot.block(0,0,3,1)=x_;
+    cylinder_rot.block(0,1,3,1)=y_;
+    cylinder_rot.block(0,2,3,1)=z_;
+    raisim::rotMatToQuat(cylinder_rot,cylinder_quat);
+    cylinder_pos<<gc_(0),gc_(1),gc_(2)+0.5;
+    cylinder_pos+=z_*1.2;
+    cylinder_quat_ ={cylinder_quat(0),cylinder_quat(1),cylinder_quat(2),cylinder_quat(3)};
+//    cylinder_quat_={0.816,0.41,0,0.41};
+    cylinder_quat_/=cylinder_quat_.norm();
 
+    if(visualizable_) {
+      origin[0]->setPosition(cylinder_pos);
+      origin[0]->setOrientation(cylinder_quat_);
+      origin[1]->setPosition(Eigen::Vector3d{pos_nearest_horn[0],pos_nearest_horn[1],0});
+      origin[1]->setOrientation(Eigen::Vector4d{1,0,0,0});
+      origin[2]->setPosition(Eigen::Vector3d{0,0,2});
+    }
+
+  }
+  void get_nearest_horn(Eigen::Vector2d gc){ // 전방에 보이는 90도 안의 범위에 있는 horn들 중 가장 가까운 것을 고른다.
+    min_distance=1e10;
+    min_index=0;
+    for (int i=0; i<poles_.size(); i++){
+      dist_to_horn=(gc-poles_[i]).norm();
+      vec_to_horn<<poles_[i]-gc,0;
+      vec_to_horn/=vec_to_horn.norm();
+
+      if (dist_to_horn < min_distance and vec_to_horn.dot(robot_vel_ori) > cos(60.0/180*M_PI)){
+        min_index=i;
+        min_distance=dist_to_horn;
+      }
+    }
+    dist_to_horn=(gc-poles_[min_index]).norm();
+    pos_nearest_horn= poles_[min_index];
+  }
+  double collide_with_horn(){
+    if(dist_to_horn<danger_radius) return 1;
+    else return 0;
+  }
+  Eigen::Vector3d crossProduct(Eigen::Vector3d A, Eigen::Vector3d B){
+    Eigen::Vector3d C;
+    C[0]=A[1]*B[2]-A[2]*B[1];
+    C[1]=-(A[0]*B[2]-A[2]*B[0]);
+    C[2]=A[0]*B[1]-A[1]*B[0];
+    return C;
+  }
   bool isTerminalState(float& terminalReward) final {
-    terminalReward = 0.;
+    if(rot(2,2)<0) {
+      terminalReward = -100.;
+      return true;
+    }
     return false;
+
   }
 
-  float notCompleted() {
+  float notCompleted() { // 0 for arrived
     if (gc_.head(2).norm() < 2)
       return 0.f;
     else
@@ -198,15 +297,34 @@ class ENVIRONMENT : public RaisimGymEnv {
   raisim::HeightMap* heightMap_;
   Eigen::VectorXd gc_init_, gv_init_, gc_, gv_, genForce_, torque4_;
   Eigen::VectorXd actionMean_, actionStd_, obDouble_;
+  raisim::Vec<4> quat;
+  raisim::Mat<3,3> rot;
+  Eigen::Vector3d robot_ori,robot_vel_ori, goal_ori;
   std::vector<Eigen::Vector2d> poles_;
-  int SCANSIZE = 20;
+  int SCANSIZE = 12;
   int GRIDSIZE = 6;
   std::vector<raisim::Visuals *> scans;  // for visualization
+  std::vector<raisim::Visuals *> origin;  // for visualization
+  Eigen::Vector3d cylinder_pos,x_,y_,z_;
+  Eigen::Matrix3d cylinder_rot;
+  Vec<4> cylinder_quat ;
+  Eigen::Vector4d cylinder_quat_;
+
+  double reward_ori, reward_vel, reward_near;
+  Eigen::VectorXf stepData_;
+  std::vector<std::string> stepDataTag_;
+
+  double danger_radius=2.1, dist_to_horn;
+  Eigen::Vector2d pos_nearest_horn;
+  Eigen::Vector3d vec_to_horn;
+  int min_index;
+  double min_distance;
 
   thread_local static std::mt19937 gen_;
   thread_local static std::normal_distribution<double> normDist_;
   thread_local static std::uniform_real_distribution<double> uniDist_;
 };
+
 
 thread_local std::mt19937 raisim::ENVIRONMENT::gen_;
 thread_local std::normal_distribution<double> raisim::ENVIRONMENT::normDist_(0., 1.);
