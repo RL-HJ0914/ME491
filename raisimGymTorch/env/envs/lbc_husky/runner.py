@@ -51,7 +51,7 @@ avg_rewards = []
 
 actor = ppo_module.Actor(ppo_module.MLP(cfg['architecture']['policy_net'], nn.LeakyReLU, ob_dim, act_dim),
                          ppo_module.MultivariateGaussianDiagonalCovariance(act_dim, 1.0),
-                         device)
+                         device) # Can change initial Policy std
 critic = ppo_module.Critic(ppo_module.MLP(cfg['architecture']['value_net'], nn.LeakyReLU, ob_dim, 1),
                            device)
 

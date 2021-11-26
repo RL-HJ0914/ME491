@@ -79,7 +79,7 @@ class ENVIRONMENT : public RaisimGymEnv {
     gc_init_ << 0, 0, 0.50, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0;
 
     /// MUST BE DONE FOR ALL ENVIRONMENTS
-    obDim_ = 17 + SCANSIZE;
+    obDim_ = 19 + SCANSIZE;
     actionDim_ = nJoints_; actionMean_.setZero(actionDim_); actionStd_.setZero(actionDim_);
     obDouble_.setZero(obDim_);
 
@@ -171,7 +171,7 @@ class ENVIRONMENT : public RaisimGymEnv {
 
   void updateObservation() {
     husky_->getState(gc_, gv_);
-    get_nearest_horn(gc_.head(2));
+
     quat[0] = gc_[3]; quat[1] = gc_[4]; quat[2] = gc_[5]; quat[3] = gc_[6];
     raisim::quatToRotMat(quat, rot);
     goal_ori<< -gc_(0), -gc_(1), 0;
@@ -179,8 +179,8 @@ class ENVIRONMENT : public RaisimGymEnv {
     robot_vel_ori << gv_(0), gv_(1),0;
     goal_ori/=goal_ori.norm();
     robot_ori/=robot_ori.norm();
-    robot_vel_ori/=robot_vel_ori.norm();
-
+    robot_vel_ori/=(robot_vel_ori.norm()+1e-8);
+    get_nearest_horn(gc_.head(2));
     raisim::Vec<3> lidarPos; raisim::Mat<3,3> lidarOri;
     husky_->getFramePosition("imu_joint", lidarPos);
     husky_->getFrameOrientation("imu_joint", lidarOri);
@@ -212,7 +212,7 @@ class ENVIRONMENT : public RaisimGymEnv {
     }
     visualize_cylinder();
 
-    obDouble_ << gc_.head(7), gv_, lidarData;
+    obDouble_ << gc_.head(7), gv_, lidarData, dist_to_horn, angle_to_horn;
   }
 
   void observe(Eigen::Ref<EigenVec> ob) final {
@@ -251,13 +251,17 @@ class ENVIRONMENT : public RaisimGymEnv {
       vec_to_horn<<poles_[i]-gc,0;
       vec_to_horn/=vec_to_horn.norm();
 
-
       if (dist_to_horn < min_distance and vec_to_horn.dot(robot_vel_ori) > cos(60.0/180*M_PI)){
         min_index=i;
         min_distance=dist_to_horn;
       }
     }
     dist_to_horn=(gc-poles_[min_index]).norm();
+    vec_to_horn<<poles_[min_index]-gc,0;
+    vec_to_horn/=vec_to_horn.norm();
+//    std::cout<<"robot_vel_ori: "<<robot_vel_ori<<std::endl;
+//    std::cout<<"vec_to_horn: "<<vec_to_horn<<std::endl;
+    angle_to_horn= asin(crossProduct(robot_vel_ori,vec_to_horn)(2)); //진행방향의 왼쪽에 horn이 있으면 + value
     pos_nearest_horn= poles_[min_index];
   }
   double collide_with_horn(){
@@ -288,12 +292,13 @@ class ENVIRONMENT : public RaisimGymEnv {
   }
 
   void curriculumUpdate() {
-
+    curriculumFactor_*=0.997;
   };
 
  private:
   int gcDim_, gvDim_, nJoints_;
   bool visualizable_ = false;
+  double curriculumFactor_=1;
   raisim::ArticulatedSystem* husky_;
   raisim::HeightMap* heightMap_;
   Eigen::VectorXd gc_init_, gv_init_, gc_, gv_, genForce_, torque4_;
@@ -315,7 +320,7 @@ class ENVIRONMENT : public RaisimGymEnv {
   Eigen::VectorXf stepData_;
   std::vector<std::string> stepDataTag_;
 
-  double danger_radius=2.1, dist_to_horn;
+  double danger_radius=2.1, dist_to_horn=0, angle_to_horn=0;
   Eigen::Vector2d pos_nearest_horn;
   Eigen::Vector3d vec_to_horn;
   int min_index;
