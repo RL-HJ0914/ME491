@@ -19,7 +19,7 @@ class PPO:
                  gamma=0.998,
                  lam=0.95,
                  value_loss_coef=0.5,
-                 entropy_coef=0.0,
+                 entropy_coef=0.01,
                  learning_rate=5e-4,
                  max_grad_norm=0.5,
                  use_clipped_value_loss=True,

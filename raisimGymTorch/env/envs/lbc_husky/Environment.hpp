@@ -85,7 +85,7 @@ class ENVIRONMENT : public RaisimGymEnv {
 
     /// action scaling
     actionMean_ = gc_init_.tail(nJoints_);
-    actionStd_.setConstant(10.);
+    actionStd_.setConstant(20.);
 
     /// Reward coefficients
     rewards_.initializeFromConfigurationFile (cfg["reward"]);
@@ -271,10 +271,10 @@ class ENVIRONMENT : public RaisimGymEnv {
     return C;
   }
   bool isTerminalState(float& terminalReward) final {
-    if(rot(2,2)<0) {
-      terminalReward = -100.;
-      return true;
-    }
+//    if(rot(2,2)<0) {
+//      terminalReward = -100.;
+//      return true;
+//    }
     return false;
 
   }

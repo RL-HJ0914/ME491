@@ -11,11 +11,11 @@ environment:
   max_time: 8
   reward:
     goal:
-      coeff: 0.3
+      coeff: 0.6
     ori:
-      coeff: 3
+      coeff: 2
     vel: # max 1
-      coeff: 20
+      coeff: 50
     near:
       coeff: 100
 
