@@ -188,31 +188,35 @@ class ENVIRONMENT : public RaisimGymEnv {
     reward_ori=goal_ori.dot(robot_ori);
 //    reward_vel= -(rot.e().transpose()*gv_.head(3))(0);// -x direction velocity
     reward_vel= goal_ori.dot(gv_.head(3))/5;
-    reward_near=(1-notCompleted());
+    reward_near=(1-notCompleted())* reward_shape(1300,1900,2);
 
-    Eigen::VectorXd lidarData(SCANSIZE);
-    Eigen::Vector3d direction;
-    const double scanWidth = 10 * M_PI/180;
-
-    for (int j = 0; j < SCANSIZE; j++) {
-      const double yaw = -(SCANSIZE-1)/2*scanWidth + scanWidth*j;
-      direction = {cos(yaw), sin(yaw), -0.05 * M_PI};
-      direction *= 1. / direction.norm();
-      const Eigen::Vector3d rayDirection = lidarOri.e() * direction;
-      auto &col = world_->rayTest(lidarPos.e(), rayDirection, 20);
-      if (col.size() > 0) {
-        lidarData[j] = (col[0].getPosition() - lidarPos.e()).norm();
-        if (visualizable_)
-          scans[j]->setPosition(col[0].getPosition());
-      } else {
-        lidarData[j] = 20;
-        if (visualizable_)
-          scans[j]->setPosition({0,0,100});
-      }
-    }
     visualize_cylinder();
 
-    obDouble_ << gc_.head(7), gv_, lidarData, dist_to_horn, angle_to_horn;
+    // if using lidar
+    if (SCANSIZE > 0) {
+      Eigen::Vector3d direction;
+      const double scanWidth = 10 * M_PI/180;
+      Eigen::VectorXd lidarData(SCANSIZE);
+      for (int j = 0; j < SCANSIZE; j++) {
+        const double yaw = -(SCANSIZE - 1) / 2 * scanWidth + scanWidth * j;
+        direction = {cos(yaw), sin(yaw), -0.05 * M_PI};
+        direction *= 1. / direction.norm();
+        const Eigen::Vector3d rayDirection = lidarOri.e() * direction;
+        auto &col = world_->rayTest(lidarPos.e(), rayDirection, 20);
+        if (col.size() > 0) {
+          lidarData[j] = (col[0].getPosition() - lidarPos.e()).norm();
+          if (visualizable_)
+            scans[j]->setPosition(col[0].getPosition());
+        } else {
+          lidarData[j] = 20;
+          if (visualizable_)
+            scans[j]->setPosition({0, 0, 100});
+        }
+      }
+      obDouble_ << gc_.head(7), gv_,  lidarData, dist_to_horn, angle_to_horn;
+    }
+    else obDouble_ << gc_.head(7), gv_, dist_to_horn, angle_to_horn;
+
   }
 
   void observe(Eigen::Ref<EigenVec> ob) final {
@@ -284,6 +288,12 @@ class ENVIRONMENT : public RaisimGymEnv {
 
   }
 
+  double reward_shape(double x1, double x2, double m){ // 1 before x1, m after x2
+    if (iter < x1) return 1;
+    else if (iter > x2) return m;
+    else return 1+(m-1)/(x2-x1)*(iter-x1);
+  }
+
   float notCompleted() { // 0 for arrived
     if (gc_.head(2).norm() < 2)
       return 0.f;
@@ -292,13 +302,13 @@ class ENVIRONMENT : public RaisimGymEnv {
   }
 
   void curriculumUpdate() {
-    curriculumFactor_*=0.997;
+    iter+=1;
   };
 
  private:
   int gcDim_, gvDim_, nJoints_;
   bool visualizable_ = false;
-  double curriculumFactor_=1;
+  int iter=0;
   raisim::ArticulatedSystem* husky_;
   raisim::HeightMap* heightMap_;
   Eigen::VectorXd gc_init_, gv_init_, gc_, gv_, genForce_, torque4_;
@@ -307,7 +317,7 @@ class ENVIRONMENT : public RaisimGymEnv {
   raisim::Mat<3,3> rot;
   Eigen::Vector3d robot_ori,robot_vel_ori, goal_ori;
   std::vector<Eigen::Vector2d> poles_;
-  int SCANSIZE = 12;
+  int SCANSIZE = 0;
   int GRIDSIZE = 6;
   std::vector<raisim::Visuals *> scans;  // for visualization
   std::vector<raisim::Visuals *> origin;  // for visualization

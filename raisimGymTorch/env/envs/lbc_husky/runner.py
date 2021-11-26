@@ -168,6 +168,7 @@ for update in range(1000000):
     if update % 10 == 0:
         ppo.writer.add_scalar('avg completion time', completed_sum / env.num_envs * cfg['environment']['control_dt'], global_step=update)
 
+    
     print('----------------------------------------------------')
     print('{:>6}th iteration'.format(update))
     print('{:<40} {:>6}'.format("avg reward: ", '{:0.10f}'.format(average_performance)))
