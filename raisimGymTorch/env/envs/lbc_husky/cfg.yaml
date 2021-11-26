@@ -4,7 +4,7 @@ record_video: yes
 environment:
   render: yes
   num_envs: 200
-  eval_every_n: 100
+  eval_every_n: 125
   num_threads: 60
   simulation_dt: 0.0025
   control_dt: 0.1
@@ -13,7 +13,7 @@ environment:
     goal:
       coeff: 0.6
     ori:
-      coeff: 2
+      coeff: 4
     vel: # max 1
       coeff: 50
     near:

@@ -251,6 +251,7 @@ class ENVIRONMENT : public RaisimGymEnv {
       vec_to_horn<<poles_[i]-gc,0;
       vec_to_horn/=vec_to_horn.norm();
 
+
       if (dist_to_horn < min_distance and vec_to_horn.dot(robot_vel_ori) > cos(60.0/180*M_PI)){
         min_index=i;
         min_distance=dist_to_horn;

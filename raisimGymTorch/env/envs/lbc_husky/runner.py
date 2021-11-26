@@ -72,6 +72,10 @@ ppo = PPO.PPO(actor=actor,
               shuffle_batch=False,
               )
 
+
+scheduler = torch.optim.lr_scheduler.MultiStepLR(ppo.optimizer, milestones=[], gamma=0.3)
+
+
 if mode == 'retrain':
     load_param(weight_path, env, actor, critic, ppo.optimizer, saver.data_dir)
 
@@ -158,6 +162,8 @@ for update in range(1000000):
     env.curriculum_callback()
 
     end = time.time()
+
+    scheduler.step()
 
     if update % 10 == 0:
         ppo.writer.add_scalar('avg completion time', completed_sum / env.num_envs * cfg['environment']['control_dt'], global_step=update)

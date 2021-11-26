@@ -17,13 +17,13 @@ args = parser.parse_args()
 # directories
 task_path = os.path.dirname(os.path.realpath(__file__))
 home_path = task_path + "/../../../.."
-weight_path = home_path + "/raisimGymTorch/data/husky_navigation/2021-11-26-14-52-39/full_1200.pt"
+weight_path = home_path + "/raisimGymTorch/data/husky_navigation/5.6s-200env/full_1250.pt"
 
 # config
 cfg = YAML().load(open(task_path + "/cfg.yaml", 'r'))
 
 # create environment from the configuration file
-cfg['environment']['num_envs'] = 200
+# cfg['environment']['num_envs'] = 200
 env = VecEnv(lbc_husky.RaisimGymEnv(home_path + "/rsc", dump(cfg['environment'], Dumper=RoundTripDumper)), cfg['environment'])
 
 # shortcuts
