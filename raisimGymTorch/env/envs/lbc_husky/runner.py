@@ -79,6 +79,9 @@ scheduler = torch.optim.lr_scheduler.MultiStepLR(ppo.optimizer, milestones=[], g
 if mode == 'retrain':
     load_param(weight_path, env, actor, critic, ppo.optimizer, saver.data_dir)
 
+T_threshold = 6  ;
+T_interval = 0.08 ;
+
 for update in range(1000000):
     start = time.time()
     env.reset()
@@ -168,7 +171,56 @@ for update in range(1000000):
     if update % 10 == 0:
         ppo.writer.add_scalar('avg completion time', completed_sum / env.num_envs * cfg['environment']['control_dt'], global_step=update)
 
-    
+    if completed_sum / env.num_envs * cfg['environment']['control_dt'] <T_threshold:
+        print("Visualizing and evaluating the current policy")
+        torch.save({
+            'actor_architecture_state_dict': actor.architecture.state_dict(),
+            'actor_distribution_state_dict': actor.distribution.state_dict(),
+            'critic_architecture_state_dict': critic.architecture.state_dict(),
+            'optimizer_state_dict': ppo.optimizer.state_dict(),
+        }, saver.data_dir+"/full_"+str(update)+'.pt')
+        # we create another graph just to demonstrate the save/load method
+        loaded_graph = ppo_module.MLP(cfg['architecture']['policy_net'], nn.LeakyReLU, ob_dim, act_dim)
+        loaded_graph.load_state_dict(torch.load(saver.data_dir+"/full_"+str(update)+'.pt')['actor_architecture_state_dict'])
+
+        env.turn_on_visualization()
+        env.start_video_recording(datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S") + "policy_"+str(update)+'.mp4')
+
+        data_tags = env.get_step_data_tag()
+        data_size = 0
+        data_mean = np.zeros(shape=(len(data_tags), 1), dtype=np.float32)
+        data_square_sum = np.zeros(shape=(len(data_tags), 1), dtype=np.float32)
+        data_min = np.inf * np.ones(shape=(len(data_tags), 1), dtype=np.float32)
+        data_max = -np.inf * np.ones(shape=(len(data_tags), 1), dtype=np.float32)
+
+        for step in range(n_steps):
+            frame_start = time.time()
+            obs = env.observe(False)
+            action = loaded_graph.architecture(torch.from_numpy(obs).cpu())
+            reward, dones, completed = env.step(action.cpu().detach().numpy())
+            frame_end = time.time()
+            wait_time = cfg['environment']['control_dt'] - (frame_end-frame_start)
+            if wait_time > 0.:
+                time.sleep(wait_time)
+            data_size = env.get_step_data(data_size, data_mean, data_square_sum, data_min, data_max)
+
+        data_size = env.get_step_data(data_size, data_mean, data_square_sum, data_min, data_max)
+
+        data_std = np.sqrt((data_square_sum - data_size * data_mean * data_mean) / (data_size - 1 + 1e-16))
+
+        for data_id in range(len(data_tags)):
+            ppo.writer.add_scalar(data_tags[data_id]+'/mean', data_mean[data_id], global_step=update)
+            ppo.writer.add_scalar(data_tags[data_id]+'/std', data_std[data_id], global_step=update)
+            ppo.writer.add_scalar(data_tags[data_id]+'/min', data_min[data_id], global_step=update)
+            ppo.writer.add_scalar(data_tags[data_id]+'/max', data_max[data_id], global_step=update)
+
+        env.stop_video_recording()
+        env.turn_off_visualization()
+
+        env.reset()
+        env.save_scaling(saver.data_dir, str(update))
+        T_threshold-=T_interval
+
     print('----------------------------------------------------')
     print('{:>6}th iteration'.format(update))
     print('{:<40} {:>6}'.format("avg reward: ", '{:0.10f}'.format(average_performance)))

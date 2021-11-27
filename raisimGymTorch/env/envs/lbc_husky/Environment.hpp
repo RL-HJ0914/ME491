@@ -188,7 +188,7 @@ class ENVIRONMENT : public RaisimGymEnv {
     reward_ori=goal_ori.dot(robot_ori);
 //    reward_vel= -(rot.e().transpose()*gv_.head(3))(0);// -x direction velocity
     reward_vel= goal_ori.dot(gv_.head(3))/5;
-    reward_near=(1-notCompleted())* reward_shape(1300,1900,2);
+    reward_near=(1-notCompleted())* reward_shape(1300,1900,1);
 
     visualize_cylinder();
 

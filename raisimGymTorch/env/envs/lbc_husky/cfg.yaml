@@ -15,7 +15,7 @@ environment:
     ori:
       coeff: 4
     vel: # max 1
-      coeff: 50
+      coeff: 60
     near:
       coeff: 100
 
