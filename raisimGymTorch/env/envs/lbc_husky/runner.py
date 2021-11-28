@@ -64,7 +64,7 @@ ppo = PPO.PPO(actor=actor,
               num_envs=cfg['environment']['num_envs'],
               num_transitions_per_env=n_steps,
               num_learning_epochs=8,# default 4
-              gamma=0.996,
+              gamma=0.999, #default 0.996
               lam=0.95,
               num_mini_batches=4,
               device=device,
