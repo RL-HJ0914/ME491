@@ -188,7 +188,7 @@ class ENVIRONMENT : public RaisimGymEnv {
     reward_ori=goal_ori.dot(robot_ori);
 //    reward_vel= -(rot.e().transpose()*gv_.head(3))(0);// -x direction velocity
     reward_vel= goal_ori.dot(gv_.head(3))/5;
-    reward_near=(1-notCompleted())* reward_shape(1300,1900,1);
+    reward_near=(1-notCompleted())* reward_shape(1600,2100,1);
 
     visualize_cylinder();
 
@@ -269,7 +269,7 @@ class ENVIRONMENT : public RaisimGymEnv {
     pos_nearest_horn= poles_[min_index];
   }
   double collide_with_horn(){
-    if(dist_to_horn<danger_radius) return 1;
+    if(dist_to_horn < danger_radius) return 1;
     else return 0;
   }
   Eigen::Vector3d crossProduct(Eigen::Vector3d A, Eigen::Vector3d B){

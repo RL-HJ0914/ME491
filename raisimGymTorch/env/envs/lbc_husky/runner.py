@@ -21,9 +21,12 @@ task_name = "husky_navigation"
 parser = argparse.ArgumentParser()
 parser.add_argument('-m', '--mode', help='set mode either train or test', type=str, default='train')
 parser.add_argument('-w', '--weight', help='pre-trained weight path', type=str, default='')
+parser.add_argument('-c', '--changelist', help='changelist of this learning', type=str, default='')
+
 args = parser.parse_args()
 mode = args.mode
 weight_path = args.weight
+changelist=args.changelist
 
 # check if gpu is available
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -31,6 +34,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 # directories
 task_path = os.path.dirname(os.path.realpath(__file__))
 home_path = task_path + "/../../../.."
+
 
 # config
 cfg = YAML().load(open(task_path + "/cfg.yaml", 'r'))
@@ -56,17 +60,22 @@ critic = ppo_module.Critic(ppo_module.MLP(cfg['architecture']['value_net'], nn.L
                            device)
 
 saver = ConfigurationSaver(log_dir=home_path + "/raisimGymTorch/data/"+task_name,
-                           save_items=[task_path + "/cfg.yaml", task_path + "/Environment.hpp"])
-tensorboard_launcher(saver.data_dir+"/..")  # press refresh (F5) after the first ppo update
+                           save_items=[task_path + "/cfg.yaml", task_path + "/Environment.hpp", task_path + "/runner.py", task_path+"/../../../algo/ppo/ppo.py"])
+# tensorboard_launcher(saver.data_dir+"/..")  # press refresh (F5) after the first ppo update
+
+# save changelist
+f= open(saver.data_dir+"/changelist.txt",'w')
+f.write(changelist)
+f.close()
 
 ppo = PPO.PPO(actor=actor,
               critic=critic,
               num_envs=cfg['environment']['num_envs'],
               num_transitions_per_env=n_steps,
-              num_learning_epochs=8,# default 4
-              gamma=0.999, #default 0.996
+              num_learning_epochs=cfg['runner']['num_learning_epochs'],# default 4
+              gamma=cfg['runner']['gamma'], #default 0.996
               lam=0.95,
-              num_mini_batches=4,
+              num_mini_batches=cfg['runner']['num_mini_batches'],
               device=device,
               log_dir=saver.data_dir,
               shuffle_batch=False,
@@ -90,7 +99,7 @@ for update in range(1000000):
     completed_sum = 0
     average_dones = 0.
 
-    if update % cfg['environment']['eval_every_n'] == 0:
+    if update % cfg['environment']['eval_every_n'] == 0 or (update > 2000 and update % 30 == 0):
         print("Visualizing and evaluating the current policy")
         torch.save({
             'actor_architecture_state_dict': actor.architecture.state_dict(),

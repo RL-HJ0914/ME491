@@ -17,8 +17,12 @@ environment:
     vel: # max 1
       coeff: 60
     near:
-      coeff: 100
+      coeff: 97
 
+runner:
+  num_learning_epochs: 8
+  gamma: 0.999
+  num_mini_batches: 4
 architecture:
   policy_net: [128, 128]
   value_net: [128, 128]

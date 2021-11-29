@@ -17,7 +17,7 @@ args = parser.parse_args()
 # directories
 task_path = os.path.dirname(os.path.realpath(__file__))
 home_path = task_path + "/../../../.."
-weight_path = home_path + "/raisimGymTorch/data/husky_navigation/2021-11-28-17-21-30/full_1500.pt"
+weight_path = home_path + "/raisimGymTorch/data/husky_navigation/2021-11-29-04-09-43/full_2375.pt"
 
 # config
 cfg = YAML().load(open(task_path + "/cfg.yaml", 'r'))
