@@ -54,7 +54,7 @@ total_steps = 0
 avg_rewards = []
 
 actor = ppo_module.Actor(ppo_module.MLP(cfg['architecture']['policy_net'], nn.LeakyReLU, ob_dim, act_dim),
-                         ppo_module.MultivariateGaussianDiagonalCovariance(act_dim, 1.0),
+                         ppo_module.MultivariateGaussianDiagonalCovariance(act_dim, cfg['runner']['start_std']),
                          device) # Can change initial Policy std
 critic = ppo_module.Critic(ppo_module.MLP(cfg['architecture']['value_net'], nn.LeakyReLU, ob_dim, 1),
                            device)
@@ -78,7 +78,7 @@ ppo = PPO.PPO(actor=actor,
               num_mini_batches=cfg['runner']['num_mini_batches'],
               device=device,
               log_dir=saver.data_dir,
-              shuffle_batch=False,
+              shuffle_batch=True,
               )
 
 
@@ -99,7 +99,7 @@ for update in range(1000000):
     completed_sum = 0
     average_dones = 0.
 
-    if update % cfg['environment']['eval_every_n'] == 0 or (update > 2000 and update % 30 == 0):
+    if update % cfg['environment']['eval_every_n'] == 0 or (update > 1000 and update % 20 == 0):
         print("Visualizing and evaluating the current policy")
         torch.save({
             'actor_architecture_state_dict': actor.architecture.state_dict(),

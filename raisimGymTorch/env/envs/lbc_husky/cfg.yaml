@@ -3,8 +3,8 @@ record_video: yes
 
 environment:
   render: yes
-  num_envs: 100
-  eval_every_n: 125
+  num_envs: 200
+  eval_every_n: 300
   num_threads: 60
   simulation_dt: 0.0025
   control_dt: 0.1
@@ -17,12 +17,14 @@ environment:
     vel: # max 1
       coeff: 60
     near:
-      coeff: 97
+      coeff: 100
 
 runner:
   num_learning_epochs: 8
-  gamma: 0.999
+  gamma: 0.996
   num_mini_batches: 4
+  start_std: 1.0
+
 architecture:
   policy_net: [128, 128]
-  value_net: [128, 128]
+  value_net: [128,128]

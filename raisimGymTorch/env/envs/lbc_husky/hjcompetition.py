@@ -17,7 +17,7 @@ args = parser.parse_args()
 # directories
 task_path = os.path.dirname(os.path.realpath(__file__))
 home_path = task_path + "/../../../.."
-weight_dir = home_path + "/raisimGymTorch/data/husky_navigation/2021-11-29-17-20-55/"
+weight_dir = home_path + "/raisimGymTorch/data/husky_navigation/2021-11-30-01-35-58/"
 file_list=os.listdir(weight_dir)
 file_list_pt=[file for file in file_list if file.endswith(".pt")]
 iter_nums= []
@@ -29,6 +29,7 @@ for file in file_list_pt:
 cfg = YAML().load(open(task_path + "/cfg.yaml", 'r'))
 
 # create environment from the configuration file
+cfg['environment']['num_envs'] = 200
 env = VecEnv(lbc_husky.RaisimGymEnv(home_path + "/rsc", dump(cfg['environment'], Dumper=RoundTripDumper)), cfg['environment'])
 
 # shortcuts
@@ -44,7 +45,7 @@ if weight_dir == "":
 
 for iteration_number in iter_nums:
     weight_path=weight_dir+"full_"+str(iteration_number)+".pt"
-    if int(iteration_number) > 2000:
+    if int(iteration_number) > 1000:
         print("Loaded weight from {}\n".format(weight_dir))
         start = time.time()
         env.reset()
@@ -60,7 +61,7 @@ for iteration_number in iter_nums:
         loaded_graph.load_state_dict(torch.load(weight_path)['actor_architecture_state_dict'])
 
         env.load_scaling(weight_dir, int(iteration_number))
-        # env.turn_on_visualization()
+        env.turn_on_visualization()
 
         max_steps = 80 ## 8 secs
         completed_sum = 0
@@ -78,7 +79,7 @@ for iteration_number in iter_nums:
         print('{:<40} {:>6}'.format("avg completion time: ", '{:0.6f}'.format(completed_sum / env.num_envs * cfg['environment']['control_dt'])))
         print('----------------------------------------------------\n')
 
-        # env.turn_off_visualization()
+        env.turn_off_visualization()
 
 print("best time: ", best_time)
 print("record: ", record)
