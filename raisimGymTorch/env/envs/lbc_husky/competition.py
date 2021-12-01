@@ -17,10 +17,11 @@ args = parser.parse_args()
 # directories
 task_path = os.path.dirname(os.path.realpath(__file__))
 home_path = task_path + "/../../../.."
-weight_path = home_path + "/raisimGymTorch/data/husky_navigation/env-200/5.6s-200env/full_1250.pt"
+
+weight_path = home_path + "/raisimGymTorch/data/husky_navigation/2021-12-01-15-11-25/full_968.pt"
 
 # config
-cfg = YAML().load(open(task_path + "/cfg.yaml", 'r'))
+cfg = YAML().load(open(weight_path.rsplit('/',1)[0] + "/cfg.yaml", 'r'))
 
 # create environment from the configuration file
 cfg['environment']['num_envs'] = 200
@@ -57,7 +58,7 @@ else:
     completed_sum = 0
 
     for step in range(max_steps):
-        time.sleep(cfg['environment']['control_dt'])
+        # time.sleep(cfg['environment']['control_dt'])
         obs = env.observe(False)
         action = loaded_graph.architecture(torch.from_numpy(obs).cpu())
         reward, dones, not_completed = env.step(action.cpu().detach().numpy())

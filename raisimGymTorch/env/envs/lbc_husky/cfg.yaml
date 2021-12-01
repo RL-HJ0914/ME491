@@ -7,7 +7,7 @@ environment:
   eval_every_n: 300
   num_threads: 60
   simulation_dt: 0.0025
-  control_dt: 0.1
+  control_dt: 0.084
   max_time: 8
   reward:
     goal:
@@ -20,7 +20,7 @@ environment:
       coeff: 100
 
 runner:
-  num_learning_epochs: 8
+  num_learning_epochs: 12
   gamma: 0.996
   num_mini_batches: 4
   start_std: 1.0

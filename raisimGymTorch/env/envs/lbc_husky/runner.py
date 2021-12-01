@@ -99,7 +99,7 @@ for update in range(1000000):
     completed_sum = 0
     average_dones = 0.
 
-    if update % cfg['environment']['eval_every_n'] == 0 or (update > 1000 and update % 20 == 0):
+    if update % cfg['environment']['eval_every_n'] == 0 or (update > 850 and update % 4 == 0):
         print("Visualizing and evaluating the current policy")
         torch.save({
             'actor_architecture_state_dict': actor.architecture.state_dict(),
