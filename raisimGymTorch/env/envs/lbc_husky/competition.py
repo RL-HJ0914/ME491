@@ -18,7 +18,7 @@ args = parser.parse_args()
 task_path = os.path.dirname(os.path.realpath(__file__))
 home_path = task_path + "/../../../.."
 
-weight_path = home_path + "/raisimGymTorch/data/husky_navigation/2021-12-01-15-11-25/full_968.pt"
+weight_path = home_path + "/raisimGymTorch/data/husky_navigation/2021-12-01-15-11-04/full_1004.pt"
 
 # config
 cfg = YAML().load(open(weight_path.rsplit('/',1)[0] + "/cfg.yaml", 'r'))
@@ -39,6 +39,7 @@ if weight_path == "":
 else:
     print("Loaded weight from {}\n".format(weight_path))
     start = time.time()
+
     env.reset()
     completion_sum = 0
     done_sum = 0
@@ -54,12 +55,14 @@ else:
     env.load_scaling(weight_dir, int(iteration_number))
     env.turn_on_visualization()
 
-    max_steps = 80 ## 8 secs
+    max_steps = int(8./cfg['environment']['control_dt']) ## 8 secs
     completed_sum = 0
 
     for step in range(max_steps):
         # time.sleep(cfg['environment']['control_dt'])
         obs = env.observe(False)
+        if (step==0):
+            print('obs: ',obs)
         action = loaded_graph.architecture(torch.from_numpy(obs).cpu())
         reward, dones, not_completed = env.step(action.cpu().detach().numpy())
         completed_sum = completed_sum + sum(not_completed)

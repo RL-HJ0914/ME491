@@ -20,7 +20,6 @@ namespace raisim {
 
     explicit ENVIRONMENT(const std::string& resourceDir, const Yaml::Node& cfg, bool visualizable) :
             RaisimGymEnv(resourceDir, cfg), visualizable_(visualizable) {
-      gen_.seed(0);
       /// set the logger for debugging
       raisim::RaiSimMsg::setFatalCallback([](){throw;});
 
@@ -116,6 +115,10 @@ namespace raisim {
       updateObservation();
     }
 
+    void setSeed(int seed_num) {
+      gen_.seed(seed_num);
+//      std::cout<<"seed: "<<seed_num<<std::endl;
+    }
 
     const std::vector<std::string>& getStepDataTag() {
       return stepDataTag_;

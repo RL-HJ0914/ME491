@@ -7,7 +7,7 @@ environment:
   eval_every_n: 300
   num_threads: 60
   simulation_dt: 0.0025
-  control_dt: 0.084
+  control_dt: 0.08
   max_time: 8
   reward:
     goal:

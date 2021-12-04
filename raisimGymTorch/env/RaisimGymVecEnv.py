@@ -74,6 +74,9 @@ class RaisimGymVecEnv:
         self._reward = np.zeros(self.num_envs, dtype=np.float32)
         self.wrapper.reset()
 
+    def init(self):
+        self.wrapper.init()
+
     def _normalize_observation(self, obs):
         if self.normalize_ob:
 

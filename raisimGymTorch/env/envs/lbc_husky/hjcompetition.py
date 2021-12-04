@@ -43,11 +43,11 @@ best_time=8.0
 iter_nums2=copy.deepcopy(iter_nums)
 
 # for iteration_number in iter_nums:
-#     if not (int(iteration_number) == 992 or int(iteration_number) == 984):
+#     if not (int(iteration_number) == 960 or int(iteration_number) == 968):
 #         iter_nums2.remove(iteration_number)
 
 for iteration_number in iter_nums2:
-
+    env.seed(0)
     weight_path=weight_dir+"full_"+str(iteration_number)+".pt"
     print("Loaded weight from {}\n".format(weight_path))
     env.reset()
