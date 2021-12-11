@@ -12,6 +12,7 @@ import argparse
 # configuration
 parser = argparse.ArgumentParser()
 parser.add_argument('-w', '--weight', help='trained weight path', type=str, default='')
+parser.add_argument('-l', '--last', help='bool for last', type=str, default='False')
 args = parser.parse_args()
 
 # directories
@@ -66,6 +67,19 @@ else:
         reward, dones, not_completed = env.step(action.cpu().detach().numpy())
         completed_sum = completed_sum + sum(not_completed)
 
-    print("iter: ",iteration_number, "time: ", completed_sum / env.num_envs * cfg['environment']['control_dt'])
+    f=open(weight_dir+"a_record.txt",'a')
+    f.write(str(iteration_number) + "/" + str(completed_sum / env.num_envs * cfg['environment']['control_dt'])+'\n')
 
+    if (args.last=="True"):
+        best_iter=0
+        best_time=8.0
+        f=open(weight_dir+"a_record.txt",'r')
+        tmp=f.readlines()
+        for i in tmp:
+            if(float(i.rsplit('/',1)[1])<best_time):
+                best_time = float(i.rsplit('/',1)[1])
+                best_iter = int(i.rsplit('/',1)[0])
+        f=open(weight_dir+"a_record.txt",'a')
+        f.write('\n'+'best time: '+str(best_time)+'s at iter'+str(best_iter)+'\n')
+        print('\n'+'best time: '+str(best_time)+'s at iter'+str(best_iter)+'\n')
     env.turn_off_visualization()

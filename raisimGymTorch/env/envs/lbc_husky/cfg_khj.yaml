@@ -1,0 +1,30 @@
+seed: 1
+record_video: yes
+
+environment:
+  render: yes
+  num_envs: 200
+  eval_every_n: 300
+  num_threads: 60
+  simulation_dt: 0.0025
+  control_dt: controldt_coeff
+  max_time: 8
+  reward:
+    goal:
+      coeff: 0.6
+    ori:
+      coeff: 4
+    vel: # max 1
+      coeff: vel_coeff
+    near:
+      coeff: near_coeff
+
+runner:
+  num_learning_epochs: 12
+  gamma: 0.996
+  num_mini_batches: 4
+  start_std: 1.0
+
+architecture:
+  policy_net: [128, 128]
+  value_net: [128,128]

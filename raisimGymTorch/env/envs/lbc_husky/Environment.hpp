@@ -78,7 +78,7 @@ namespace raisim {
       gc_init_ << 0, 0, 0.50, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0;
 
       /// MUST BE DONE FOR ALL ENVIRONMENTS
-      obDim_ = 19 + SCANSIZE;
+      obDim_ = 17 + SCANSIZE;
       actionDim_ = nJoints_; actionMean_.setZero(actionDim_); actionStd_.setZero(actionDim_);
       obDouble_.setZero(obDim_);
 
@@ -166,7 +166,7 @@ namespace raisim {
       }
 
       updateObservation();
-      rewards_.record("goal", -gc_.head<2>().norm()-0*collide_with_horn());
+      rewards_.record("goal", (-gc_.head<2>().norm()-0*collide_with_horn()));
       rewards_.record("ori", reward_ori);
       rewards_.record("vel",reward_vel);
       rewards_.record("near",reward_near);
@@ -191,9 +191,9 @@ namespace raisim {
       husky_->getFrameOrientation("imu_joint", lidarOri);
 
       reward_ori=goal_ori.dot(robot_ori);
-//    reward_vel= -(rot.e().transpose()*gv_.head(3))(0);// -x direction velocity
       reward_vel= goal_ori.dot(gv_.head(3))/5;
-      reward_near=1-notCompleted();//near이면 1 아니면 0
+      reward_near=1-notCompleted();// near이면 1 아니면 0
+
 
       visualize_cylinder();
 
@@ -218,7 +218,7 @@ namespace raisim {
               scans[j]->setPosition({0, 0, 100});
           }
         }
-        obDouble_ << gc_.head(7), gv_,  lidarData, dist_to_horn, angle_to_horn;
+        obDouble_ << gc_.head(7), gv_,  lidarData;
       }
       else obDouble_ << gc_.head(7), gv_, dist_to_horn, angle_to_horn;
 
@@ -322,7 +322,7 @@ namespace raisim {
     raisim::Mat<3,3> rot;
     Eigen::Vector3d robot_ori,robot_vel_ori, goal_ori;
     std::vector<Eigen::Vector2d> poles_;
-    int SCANSIZE = 0;
+    int SCANSIZE = 9;
     int GRIDSIZE = 6;
     std::vector<raisim::Visuals *> scans;  // for visualization
     std::vector<raisim::Visuals *> origin;  // for visualization

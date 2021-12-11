@@ -7,23 +7,24 @@ environment:
   eval_every_n: 300
   num_threads: 60
   simulation_dt: 0.0025
-  control_dt: 0.08
+  control_dt: 0.07
   max_time: 8
   reward:
     goal:
       coeff: 0.6
     ori:
-      coeff: 4
+      coeff: 0
     vel: # max 1
-      coeff: 60
+      coeff: 69
     near:
       coeff: 100
 
 runner:
   num_learning_epochs: 12
   gamma: 0.996
-  num_mini_batches: 4
+  num_mini_batches: 8
   start_std: 1.0
+  seed: 4
 
 architecture:
   policy_net: [128, 128]

@@ -12,6 +12,7 @@ import numpy as np
 import torch
 import datetime
 import argparse
+import random
 
 
 # task specification
@@ -42,6 +43,7 @@ cfg = YAML().load(open(task_path + "/cfg.yaml", 'r'))
 # create environment from the configuration file
 env = VecEnv(lbc_husky.RaisimGymEnv(home_path + "/rsc", dump(cfg['environment'], Dumper=RoundTripDumper)), cfg['environment'])
 
+
 # shortcuts
 ob_dim = env.num_obs
 act_dim = env.num_acts
@@ -63,6 +65,16 @@ saver = ConfigurationSaver(log_dir=home_path + "/raisimGymTorch/data/"+task_name
                            save_items=[task_path + "/cfg.yaml", task_path + "/Environment.hpp", task_path + "/runner.py", task_path+"/../../../algo/ppo/ppo.py"])
 # tensorboard_launcher(saver.data_dir+"/..")  # press refresh (F5) after the first ppo update
 
+#seed generation
+seed=cfg['runner']['seed']
+random.seed(seed)
+np.random.seed(abs(seed))
+torch.manual_seed(seed)
+env.seed(seed)
+# file=open(saver.data_dir+"/Seed.txt","w")
+# file.write('seed: '+str(seed))
+# file.close()
+
 # save changelist
 f= open(saver.data_dir+"/changelist.txt",'w')
 f.write(changelist)
@@ -82,13 +94,13 @@ ppo = PPO.PPO(actor=actor,
               )
 
 
-scheduler = torch.optim.lr_scheduler.MultiStepLR(ppo.optimizer, milestones=[], gamma=0.3)
+scheduler = torch.optim.lr_scheduler.MultiStepLR(ppo.optimizer, milestones=[], gamma=0.1)
 
 
 if mode == 'retrain':
     load_param(weight_path, env, actor, critic, ppo.optimizer, saver.data_dir)
 
-T_threshold = 6  ;
+T_threshold = 5.8  ;
 T_interval = 0.08 ;
 
 for update in range(1000000):
@@ -99,7 +111,7 @@ for update in range(1000000):
     completed_sum = 0
     average_dones = 0.
 
-    if update % cfg['environment']['eval_every_n'] == 0 or (update > 650 and update % 4 == 0):
+    if update % cfg['environment']['eval_every_n'] == 0 or (update > 620 and update % 4 == 0):
         print("Visualizing and evaluating the current policy")
         torch.save({
             'actor_architecture_state_dict': actor.architecture.state_dict(),
@@ -228,7 +240,6 @@ for update in range(1000000):
 
         env.reset()
         env.save_scaling(saver.data_dir, str(update))
-        T_threshold-=T_interval
 
     print('----------------------------------------------------')
     print('{:>6}th iteration'.format(update))
