@@ -5,7 +5,7 @@ environment:
   render: yes
   num_envs: 200
   eval_every_n: 300
-  num_threads: 60
+  num_threads: 64
   simulation_dt: 0.0025
   control_dt: 0.07
   max_time: 8
@@ -24,7 +24,7 @@ runner:
   gamma: 0.996
   num_mini_batches: 8
   start_std: 1.0
-  seed: 4
+  seed: 14
 
 architecture:
   policy_net: [128, 128]
